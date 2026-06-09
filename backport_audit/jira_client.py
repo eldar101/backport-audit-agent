@@ -35,6 +35,12 @@ class JiraClient:
         except LegacySearchRequired:
             return self._search_bugs_legacy(jql)
 
+    def count_issues(self, jql: str) -> int:
+        try:
+            return self._count_issues_cloud(jql)
+        except LegacySearchRequired:
+            return self._count_issues_legacy(jql)
+
     @staticmethod
     def build_jql(
         *,
@@ -78,6 +84,16 @@ class JiraClient:
 
         return issues
 
+    def _count_issues_cloud(self, jql: str) -> int:
+        response = self.session.post(
+            urljoin(self.base_url, "rest/api/3/search/approximate-count"),
+            json={"jql": jql},
+        )
+        if response.status_code in {404, 405, 410}:
+            raise LegacySearchRequired
+        response.raise_for_status()
+        return int(response.json().get("count", 0))
+
     def _search_bugs_legacy(self, jql: str) -> list[JiraIssue]:
         issues: list[JiraIssue] = []
         start_at = 0
@@ -103,6 +119,14 @@ class JiraClient:
                 break
 
         return issues
+
+    def _count_issues_legacy(self, jql: str) -> int:
+        response = self.session.post(
+            urljoin(self.base_url, "rest/api/2/search"),
+            json={"jql": jql, "startAt": 0, "maxResults": 0, "fields": []},
+        )
+        response.raise_for_status()
+        return int(response.json().get("total", 0))
 
     def get_remote_links(self, issue_key: str) -> list[str]:
         response = self.session.get(
@@ -159,6 +183,24 @@ def build_jql(
     if project:
         jql_parts.insert(0, f"project = {project}")
     return " AND ".join(jql_parts)
+
+
+def add_status_filter(jql: str, status: str) -> str:
+    base_jql, order_by = split_order_by(jql)
+    status_filter = f'status = "{status}"'
+    filtered = f"{base_jql} AND {status_filter}"
+    if order_by:
+        return f"{filtered} {order_by}"
+    return filtered
+
+
+def split_order_by(jql: str) -> tuple[str, str]:
+    marker = " ORDER BY "
+    upper = jql.upper()
+    index = upper.rfind(marker)
+    if index == -1:
+        return jql.strip(), ""
+    return jql[:index].strip(), jql[index:].strip()
 
 
 def search_fields() -> list[str]:

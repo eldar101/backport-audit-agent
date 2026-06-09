@@ -6,7 +6,7 @@ from rich.console import Console
 
 from backport_audit.git_verifier import GitVerifier
 from backport_audit.github_client import GitHubClient
-from backport_audit.jira_client import JiraClient
+from backport_audit.jira_client import JiraClient, add_status_filter
 from backport_audit.models import (
     AuditStatus,
     AuditSummary,
@@ -35,7 +35,13 @@ def run_audit(
         project=jira_project,
         issue_type=issue_type,
     )
+    closed_jql = add_status_filter(jql, closed_status)
     console.print(f"[bold]Jira JQL:[/bold] {jql}")
+    console.print(f"[bold]Closed Jira JQL:[/bold] {closed_jql}")
+    total_count = jira.count_issues(jql)
+    closed_count = jira.count_issues(closed_jql)
+    console.print(f"[bold]Jira total count:[/bold] {total_count}")
+    console.print(f"[bold]Jira closed count:[/bold] {closed_count}")
     issues = jira.search_bugs(
         fix_version,
         jira_project,
@@ -43,10 +49,15 @@ def run_audit(
         jql_override=jql_override,
     )
     console.print(f"[bold]Closed status:[/bold] {closed_status}")
+    if total_count > 0 and not issues:
+        raise RuntimeError(
+            f"Jira count API returned {total_count} issues for '{jql}', but search returned 0. "
+            "This indicates a Jira search pagination or response parsing bug in the tool."
+        )
     if not issues:
         console.print(
-            "[yellow]Jira returned 0 issues. Try --all-issue-types or --jql with the exact "
-            "query that works in Jira.[/yellow]"
+            "[yellow]Jira returned 0 issues. Use --jql with the exact query that works in Jira "
+            "if this is unexpected.[/yellow]"
         )
         return build_summary(fix_version, target_branch, [], closed_status), []
     verifier.ensure_repo()

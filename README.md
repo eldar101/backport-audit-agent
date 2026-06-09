@@ -11,7 +11,7 @@ backport pull requests.
 
 Given a Jira fixVersion, the CLI:
 
-1. Queries Jira for bugs in that fixVersion.
+1. Queries Jira for issues in that fixVersion.
 2. Splits bugs into open/unresolved and closed/resolved.
 3. Finds related GitHub pull requests from:
    - Jira remote links
@@ -209,6 +209,16 @@ By default, generated JQL matches all issues in the fixVersion:
 ```text
 project = PROJ AND fixVersion in ("1.2.0-rc1")
 ```
+
+Before fetching issue details, the tool asks Jira for counts using:
+
+```text
+fixVersion in ("1.2.0-rc1")
+fixVersion in ("1.2.0-rc1") AND status = "Closed"
+```
+
+If Jira says the count is non-zero but issue fetch returns zero, the tool fails
+with a diagnostic instead of producing an empty report.
 
 If you only want a specific issue type, pass it explicitly:
 

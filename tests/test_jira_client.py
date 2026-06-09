@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backport_audit.jira_client import JiraClient, build_jql, jira_text
+from backport_audit.jira_client import JiraClient, add_status_filter, build_jql, jira_text
 
 
 class FakeResponse:
@@ -117,3 +117,20 @@ def test_search_bugs_accepts_exact_jql_override():
 
     assert client.search_bugs("ignored", jql_override='project = PROJ AND labels = "foo"') == []
     assert client.session.posts[0][1]["jql"] == 'project = PROJ AND labels = "foo"'
+
+
+def test_count_issues_uses_jira_cloud_count_endpoint():
+    client = JiraClient("https://jira.example.com", "user@example.com", "token")
+    client.session = FakeSession([FakeResponse(200, {"count": 42})])
+
+    assert client.count_issues('fixVersion in ("1.2.0-rc1")') == 42
+    assert client.session.posts[0][0] == (
+        "https://jira.example.com/rest/api/3/search/approximate-count"
+    )
+
+
+def test_add_status_filter_preserves_order_by():
+    assert add_status_filter(
+        'fixVersion = "1.2.0-rc1" ORDER BY created DESC',
+        "Closed",
+    ) == 'fixVersion = "1.2.0-rc1" AND status = "Closed" ORDER BY created DESC'
