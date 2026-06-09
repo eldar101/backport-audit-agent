@@ -68,8 +68,42 @@ python -m pip install -e '.[dev]'
 
 ## Authentication
 
-Credentials are read from environment variables. If they are missing, the CLI prompts
-for them securely and does not save them to disk.
+The CLI first tries to reuse existing credentials. If anything required is missing,
+it prompts securely and does not save secrets to disk.
+
+Credential discovery order:
+
+1. Explicit CLI values, where available.
+2. Environment variables.
+3. Local CLI config:
+   - GitHub: `gh auth token`
+   - Jira: simple values from `~/.jira.d/config.yml`, `~/.jira/config.yml`,
+     `~/.config/jira/config.yml`, or `~/.config/jira/config.yaml`
+4. Interactive prompt.
+
+Supported Jira environment variables:
+
+```bash
+JIRA_BASE_URL
+JIRA_URL
+JIRA_SERVER
+ATLASSIAN_SITE
+JIRA_USER
+JIRA_EMAIL
+JIRA_USERNAME
+ATLASSIAN_EMAIL
+JIRA_TOKEN
+JIRA_API_TOKEN
+JIRA_PERSONAL_ACCESS_TOKEN
+ATLASSIAN_API_TOKEN
+```
+
+Supported GitHub environment variables:
+
+```bash
+GITHUB_TOKEN
+GH_TOKEN
+```
 
 ### Jira Cloud
 
@@ -108,6 +142,15 @@ Create a GitHub token with read access to the target repository.
 
 For public repos, a fine-grained token with repository read permissions is enough.
 For private repos, grant access to the private repository.
+
+If you already use the GitHub CLI, this is usually enough:
+
+```bash
+gh auth login
+gh auth status
+```
+
+The tool will reuse `gh auth token` when `GITHUB_TOKEN` and `GH_TOKEN` are not set.
 
 Set:
 

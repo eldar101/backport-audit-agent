@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Annotated
 
@@ -8,7 +7,14 @@ import typer
 from rich.console import Console
 
 from backport_audit.audit import run_audit
-from backport_audit.config import derive_target_branch, prompt_missing_auth
+from backport_audit.config import (
+    derive_target_branch,
+    prompt_missing_auth,
+    resolve_github_token,
+    resolve_jira_base_url,
+    resolve_jira_token,
+    resolve_jira_user,
+)
 from backport_audit.git_verifier import GitVerifier
 from backport_audit.github_client import GitHubClient
 from backport_audit.jira_client import JiraClient
@@ -31,7 +37,7 @@ def audit(
     repo: Annotated[str, typer.Option("--repo", help="GitHub repo in owner/name form.")],
     jira_url: Annotated[
         str | None,
-        typer.Option("--jira-url", envvar="JIRA_BASE_URL", help="Jira base URL."),
+        typer.Option("--jira-url", help="Jira base URL."),
     ] = None,
     project: Annotated[
         str | None,
@@ -50,6 +56,7 @@ def audit(
         typer.Option("--output-dir", help="Directory for Markdown, JSON, and CSV reports."),
     ] = Path("reports"),
 ) -> None:
+    jira_url = resolve_jira_base_url(jira_url)
     if not jira_url:
         jira_url = console.input("Jira base URL: ").strip()
     if not jira_url:
@@ -60,9 +67,9 @@ def audit(
 
     jira_user, jira_token, github_token = prompt_missing_auth(
         jira_base_url=jira_url,
-        jira_user=os.getenv("JIRA_USER") or os.getenv("JIRA_EMAIL"),
-        jira_token=os.getenv("JIRA_TOKEN"),
-        github_token=os.getenv("GITHUB_TOKEN") or os.getenv("GH_TOKEN"),
+        jira_user=resolve_jira_user(),
+        jira_token=resolve_jira_token(),
+        github_token=resolve_github_token(),
         console=console,
     )
 
