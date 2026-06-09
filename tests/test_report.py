@@ -16,6 +16,7 @@ from backport_audit.report import (
     csv_safe,
     grouped_results,
     render_markdown,
+    write_reports,
 )
 
 
@@ -72,6 +73,47 @@ def test_csv_safe_neutralizes_spreadsheet_formulas():
     assert csv_safe("+SUM(1,1)") == "'+SUM(1,1)"
     assert csv_safe("@HYPERLINK(\"https://example.com\")") == "'@HYPERLINK(\"https://example.com\")"
     assert csv_safe("normal text") == "normal text"
+
+
+def test_write_reports_defaults_to_markdown_and_csv(tmp_path):
+    paths = write_reports(
+        output_dir=tmp_path,
+        summary=summary(),
+        results=[audit_result("PROJ-1", "Closed", AuditStatus.BACKPORTED_CONFIRMED)],
+        jira_url="https://jira.example.com",
+    )
+
+    assert [path.suffix for path in paths] == [".md", ".csv"]
+    assert (tmp_path / "backport-audit-1.2.0-rc1.md").exists()
+    assert (tmp_path / "backport-audit-1.2.0-rc1.csv").exists()
+    assert not (tmp_path / "backport-audit-1.2.0-rc1.json").exists()
+
+
+def test_write_reports_can_include_json(tmp_path):
+    paths = write_reports(
+        output_dir=tmp_path,
+        summary=summary(),
+        results=[audit_result("PROJ-1", "Closed", AuditStatus.BACKPORTED_CONFIRMED)],
+        jira_url="https://jira.example.com",
+        include_json=True,
+    )
+
+    assert [path.suffix for path in paths] == [".md", ".csv", ".json"]
+    assert (tmp_path / "backport-audit-1.2.0-rc1.json").exists()
+
+
+def summary() -> AuditSummary:
+    return AuditSummary(
+        fix_version="1.2.0-rc1",
+        target_branch="release-1.2",
+        closed_status="Closed",
+        total_bugs=1,
+        closed_bugs=1,
+        not_closed_bugs=0,
+        closed_with_pr_backported=1,
+        closed_with_pr_not_backported=0,
+        closed_without_pr=0,
+    )
 
 
 def audit_result(

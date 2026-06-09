@@ -92,8 +92,12 @@ def audit(
     ] = None,
     output_dir: Annotated[
         Path,
-        typer.Option("--output-dir", help="Directory for Markdown, JSON, and CSV reports."),
+        typer.Option("--output-dir", help="Directory for Markdown and CSV reports."),
     ] = Path("reports"),
+    include_json: Annotated[
+        bool,
+        typer.Option("--json", help="Also write a JSON report for automation."),
+    ] = False,
 ) -> None:
     jira_url = resolve_jira_base_url(jira_url)
     if not jira_url:
@@ -140,17 +144,17 @@ def audit(
         console=console,
     )
     print_summary(console, summary, results)
-    markdown_path, json_path, csv_path = write_reports(
+    report_paths = write_reports(
         output_dir=output_dir,
         summary=summary,
         results=results,
         jira_url=jira_url,
+        include_json=include_json,
     )
     console.print()
     console.print("[green]Reports written:[/green]")
-    console.print(f"- {markdown_path}")
-    console.print(f"- {json_path}")
-    console.print(f"- {csv_path}")
+    for path in report_paths:
+        console.print(f"- {path}")
 
 
 if __name__ == "__main__":

@@ -50,7 +50,8 @@ def write_reports(
     summary: AuditSummary,
     results: list[IssueAuditResult],
     jira_url: str,
-) -> tuple[Path, Path, Path]:
+    include_json: bool = False,
+) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     safe_version = summary.fix_version.replace("/", "_")
     markdown_path = output_dir / f"backport-audit-{safe_version}.md"
@@ -59,21 +60,29 @@ def write_reports(
 
     grouped = grouped_results(results, summary.closed_status)
     markdown_path.write_text(render_markdown(summary, grouped, jira_url), encoding="utf-8")
-    json_path.write_text(
-        json.dumps(
-            {
-                "summary": asdict(summary),
-                "buckets": {
-                    bucket: [result_to_dict(result, jira_url) for result in bucket_results]
-                    for bucket, bucket_results in grouped.items()
-                },
-            },
-            indent=2,
-        ),
-        encoding="utf-8",
-    )
     write_csv(csv_path, grouped, jira_url)
-    return markdown_path, json_path, csv_path
+    paths = [markdown_path, csv_path]
+    if include_json:
+        json_path.write_text(render_json(summary, grouped, jira_url), encoding="utf-8")
+        paths.append(json_path)
+    return paths
+
+
+def render_json(
+    summary: AuditSummary,
+    grouped: dict[str, list[IssueAuditResult]],
+    jira_url: str,
+) -> str:
+    return json.dumps(
+        {
+            "summary": asdict(summary),
+            "buckets": {
+                bucket: [result_to_dict(result, jira_url) for result in bucket_results]
+                for bucket, bucket_results in grouped.items()
+            },
+        },
+        indent=2,
+    )
 
 
 def summary_rows(summary: AuditSummary) -> list[tuple[str, int]]:

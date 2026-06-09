@@ -100,9 +100,10 @@ Reports are written to:
 
 ```text
 reports/backport-audit-1.2.0-rc1.md
-reports/backport-audit-1.2.0-rc1.json
 reports/backport-audit-1.2.0-rc1.csv
 ```
+
+If you also want a JSON report for scripts or automation, add `--json`.
 
 ## Useful Options
 
