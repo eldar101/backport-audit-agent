@@ -74,9 +74,7 @@ class JiraClient:
             data = response.json()
             raw_issues = data.get("issues", [])
             for raw_issue in raw_issues:
-                issue = self._parse_issue(raw_issue)
-                issue.remote_links.extend(self.get_remote_links(issue.key))
-                issues.append(issue)
+                issues.append(self._parse_issue(raw_issue))
 
             next_page_token = data.get("nextPageToken")
             if data.get("isLast", True) or not next_page_token or not raw_issues:
@@ -110,9 +108,7 @@ class JiraClient:
             data = response.json()
             raw_issues = data.get("issues", [])
             for raw_issue in raw_issues:
-                issue = self._parse_issue(raw_issue)
-                issue.remote_links.extend(self.get_remote_links(issue.key))
-                issues.append(issue)
+                issues.append(self._parse_issue(raw_issue))
 
             start_at += len(raw_issues)
             if start_at >= data.get("total", 0) or not raw_issues:

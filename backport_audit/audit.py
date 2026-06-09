@@ -42,6 +42,7 @@ def run_audit(
     closed_count = jira.count_issues(closed_jql)
     console.print(f"[bold]Jira total count:[/bold] {total_count}")
     console.print(f"[bold]Jira closed count:[/bold] {closed_count}")
+    console.print("[cyan]Fetching Jira issue details...[/cyan]")
     issues = jira.search_bugs(
         fix_version,
         jira_project,
@@ -60,12 +61,18 @@ def run_audit(
             "if this is unexpected.[/yellow]"
         )
         return build_summary(fix_version, target_branch, [], closed_status), []
+    console.print(f"[green]Fetched {len(issues)} Jira issues.[/green]")
     verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []
     for issue in issues:
         console.print(f"[cyan]Auditing {issue.key}[/cyan] {issue.summary}")
-        pr_refs = discover_pull_requests(issue, github=github, default_repo=github_repo)
+        pr_refs = discover_pull_requests(
+            issue,
+            jira=jira,
+            github=github,
+            default_repo=github_repo,
+        )
         pr_details = []
         for ref in pr_refs:
             try:

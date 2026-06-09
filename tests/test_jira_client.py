@@ -66,6 +66,7 @@ def test_search_bugs_uses_jira_cloud_enhanced_search():
     assert client.session.posts[0][1]["jql"] == (
         'project = PROJ AND fixVersion in ("1.2.0-rc1")'
     )
+    assert client.session.gets == []
 
 
 def test_search_bugs_falls_back_to_legacy_search_when_cloud_search_is_missing():

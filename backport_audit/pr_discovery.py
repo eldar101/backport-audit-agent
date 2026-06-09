@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from backport_audit.github_client import GitHubClient
+from backport_audit.jira_client import JiraClient
 from backport_audit.models import JiraIssue, PullRequestRef
 from backport_audit.util import GITHUB_PR_RE, normalize_repo
 
@@ -10,10 +11,17 @@ from backport_audit.util import GITHUB_PR_RE, normalize_repo
 def discover_pull_requests(
     issue: JiraIssue,
     *,
+    jira: JiraClient | None = None,
     github: GitHubClient,
     default_repo: str,
 ) -> list[PullRequestRef]:
     refs: dict[tuple[str, int], PullRequestRef] = {}
+    if jira and not issue.remote_links:
+        try:
+            issue.remote_links.extend(jira.get_remote_links(issue.key))
+        except Exception:
+            pass
+
     for text in _issue_text_sources(issue):
         for ref in extract_pr_refs(text):
             refs[(ref.repo, ref.number)] = ref
