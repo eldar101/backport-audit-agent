@@ -67,8 +67,8 @@ def audit(
 
     jira_user, jira_token, github_token = prompt_missing_auth(
         jira_base_url=jira_url,
-        jira_user=resolve_jira_user(),
-        jira_token=resolve_jira_token(),
+        jira_user=resolve_jira_user(jira_base_url=jira_url),
+        jira_token=resolve_jira_token(jira_base_url=jira_url),
         github_token=resolve_github_token(),
         console=console,
     )

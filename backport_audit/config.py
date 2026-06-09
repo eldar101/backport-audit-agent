@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import getpass
+import netrc
 import os
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 from rich.console import Console
 
@@ -57,12 +59,20 @@ def resolve_jira_base_url(explicit_url: str | None = None) -> str | None:
     return normalize_url(endpoint) if endpoint else None
 
 
-def resolve_jira_user(explicit_user: str | None = None) -> str | None:
+def resolve_jira_user(
+    explicit_user: str | None = None,
+    *,
+    jira_base_url: str | None = None,
+) -> str | None:
     if explicit_user:
         return explicit_user
     value = first_env("JIRA_USER", "JIRA_EMAIL", "JIRA_USERNAME", "ATLASSIAN_EMAIL")
     if value:
         return value
+
+    netrc_auth = read_netrc_auth(jira_base_url)
+    if netrc_auth and netrc_auth[0]:
+        return netrc_auth[0]
 
     config = read_jira_cli_config()
     return (
@@ -73,7 +83,11 @@ def resolve_jira_user(explicit_user: str | None = None) -> str | None:
     )
 
 
-def resolve_jira_token(explicit_token: str | None = None) -> str | None:
+def resolve_jira_token(
+    explicit_token: str | None = None,
+    *,
+    jira_base_url: str | None = None,
+) -> str | None:
     if explicit_token:
         return explicit_token
     value = first_env(
@@ -84,6 +98,10 @@ def resolve_jira_token(explicit_token: str | None = None) -> str | None:
     )
     if value:
         return value
+
+    netrc_auth = read_netrc_auth(jira_base_url)
+    if netrc_auth and netrc_auth[1]:
+        return netrc_auth[1]
 
     config = read_jira_cli_config()
     return (
@@ -117,14 +135,36 @@ def read_gh_auth_token() -> str | None:
         text=True,
         capture_output=True,
     )
-    if result.returncode != 0:
+    if result.returncode == 0:
+        token = result.stdout.strip()
+        if token:
+            return token
+
+    status = subprocess.run(
+        ["gh", "auth", "status", "--show-token"],
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if status.returncode != 0:
         return None
-    token = result.stdout.strip()
-    return token or None
+    return parse_gh_auth_status_token(status.stdout + status.stderr)
+
+
+def parse_gh_auth_status_token(output: str) -> str | None:
+    for line in output.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("- Token:"):
+            token = stripped.removeprefix("- Token:").strip()
+            return token or None
+    return None
 
 
 def read_jira_cli_config() -> dict[str, str]:
+    configured_path = first_env("JIRA_CONFIG_FILE")
     paths = [
+        Path(configured_path).expanduser() if configured_path else None,
+        Path.home() / ".config" / ".jira" / ".config.yml",
         Path.home() / ".jira.d" / "config.yml",
         Path.home() / ".jira" / "config.yml",
         Path.home() / ".config" / "jira" / "config.yml",
@@ -132,7 +172,8 @@ def read_jira_cli_config() -> dict[str, str]:
     ]
     merged: dict[str, str] = {}
     for path in paths:
-        merged.update(read_simple_yaml_mapping(path))
+        if path:
+            merged.update(read_simple_yaml_mapping(path))
     return merged
 
 
@@ -151,6 +192,27 @@ def read_simple_yaml_mapping(path: Path) -> dict[str, str]:
         if key and value and not value.startswith("{"):
             values[key] = value
     return values
+
+
+def read_netrc_auth(jira_base_url: str | None) -> tuple[str | None, str | None] | None:
+    if not jira_base_url:
+        return None
+
+    host = urlparse(normalize_url(jira_base_url)).hostname
+    if not host:
+        return None
+
+    try:
+        netrc_path = first_env("NETRC")
+        auth = netrc.netrc(netrc_path).authenticators(host)
+    except (FileNotFoundError, netrc.NetrcParseError):
+        return None
+
+    if not auth:
+        return None
+
+    login, _, password = auth
+    return login, password
 
 
 def prompt_missing_auth(

@@ -77,8 +77,10 @@ Credential discovery order:
 2. Environment variables.
 3. Local CLI config:
    - GitHub: `gh auth token`
-   - Jira: simple values from `~/.jira.d/config.yml`, `~/.jira/config.yml`,
-     `~/.config/jira/config.yml`, or `~/.config/jira/config.yaml`
+   - Jira: simple values from `JIRA_CONFIG_FILE`, `~/.config/.jira/.config.yml`,
+     `~/.jira.d/config.yml`, `~/.jira/config.yml`, `~/.config/jira/config.yml`,
+     or `~/.config/jira/config.yaml`
+   - Jira token from `.netrc` for the configured Jira host
 4. Interactive prompt.
 
 Supported Jira environment variables:
@@ -119,6 +121,21 @@ Set:
 export JIRA_BASE_URL='https://your-domain.atlassian.net'
 export JIRA_USER='you@example.com'
 export JIRA_TOKEN='your-jira-api-token'
+```
+
+If you use `ankitpokhrel/jira-cli`, the tool can reuse the Jira server/login from:
+
+```text
+~/.config/.jira/.config.yml
+```
+
+That CLI usually stores the API token in `.netrc` or expects `JIRA_API_TOKEN`.
+This tool supports both. Example `.netrc` entry:
+
+```text
+machine your-domain.atlassian.net
+  login you@example.com
+  password your-jira-api-token
 ```
 
 ### Jira Data Center or Server

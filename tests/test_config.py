@@ -2,6 +2,8 @@ from pathlib import Path
 
 from backport_audit.config import (
     normalize_url,
+    parse_gh_auth_status_token,
+    read_netrc_auth,
     read_simple_yaml_mapping,
     resolve_github_token,
     resolve_jira_base_url,
@@ -30,6 +32,15 @@ def test_resolve_github_token_prefers_env(monkeypatch):
     assert resolve_github_token() == "gh-token"
 
 
+def test_parse_gh_auth_status_token():
+    output = """
+github.com
+  - Token: gho_example
+"""
+
+    assert parse_gh_auth_status_token(output) == "gho_example"
+
+
 def test_read_simple_yaml_mapping(tmp_path: Path):
     config = tmp_path / "config.yml"
     config.write_text(
@@ -46,3 +57,14 @@ token: abc123
         "login": "user@example.com",
         "token": "abc123",
     }
+
+
+def test_read_netrc_auth(monkeypatch, tmp_path: Path):
+    netrc_file = tmp_path / ".netrc"
+    netrc_file.write_text(
+        "machine jira.example.com login user@example.com password token-123\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("NETRC", str(netrc_file))
+
+    assert read_netrc_auth("https://jira.example.com") == ("user@example.com", "token-123")
