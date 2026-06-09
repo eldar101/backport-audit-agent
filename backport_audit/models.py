@@ -26,11 +26,6 @@ class JiraIssue:
     comments: list[str] = field(default_factory=list)
     remote_links: list[str] = field(default_factory=list)
 
-    @property
-    def is_closed(self) -> bool:
-        closed_statuses = {"closed", "done", "resolved", "verified", "release pending"}
-        return bool(self.resolution) or self.status.strip().lower() in closed_statuses
-
 
 @dataclass(frozen=True)
 class PullRequestRef:

@@ -9,6 +9,8 @@ from backport_audit.models import (
     AuditStatus,
     AuditSummary,
     IssueAuditResult,
+    JiraIssue,
+    PullRequestDetails,
     VerificationResult,
 )
 from backport_audit.pr_discovery import discover_pull_requests
@@ -138,7 +140,7 @@ def run_audit(
 def _best_pr_verification(
     *,
     issue_key: str,
-    prs,
+    prs: list[PullRequestDetails],
     verifier: GitVerifier,
     target_branch: str,
 ) -> VerificationResult:
@@ -203,13 +205,13 @@ def build_summary(
     )
 
 
-def is_closed_issue(issue, closed_status: str) -> bool:
+def is_closed_issue(issue: JiraIssue, closed_status: str) -> bool:
     return issue.status.strip().lower() == closed_status.strip().lower()
 
 
-def count_closed_issues(issues, closed_status: str) -> int:
+def count_closed_issues(issues: list[JiraIssue], closed_status: str) -> int:
     return sum(1 for issue in issues if is_closed_issue(issue, closed_status))
 
 
-def count_statuses(results, statuses: set[AuditStatus]) -> int:
+def count_statuses(results: list[IssueAuditResult], statuses: set[AuditStatus]) -> int:
     return sum(1 for result in results if result.verification.status in statuses)

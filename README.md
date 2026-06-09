@@ -79,6 +79,8 @@ The console and report files show these buckets:
 - bugs that are closed and do not have PR
 
 The CSV and Markdown reports include Jira issue links and GitHub PR links.
+Each issue row includes its Jira status, discovered PR links, audit result, and
+the evidence used for that result.
 
 Reports are written to:
 
@@ -87,16 +89,6 @@ reports/backport-audit-1.2.0-rc1.md
 reports/backport-audit-1.2.0-rc1.json
 reports/backport-audit-1.2.0-rc1.csv
 ```
-
-Per issue, the report shows whether it is:
-
-- `BACKPORTED_CONFIRMED`
-- `PROBABLY_BACKPORTED`
-- `NOT_BACKPORTED`
-- `CLOSED_NO_PR`
-- `PR_NOT_MERGED`
-- `MANUAL_REVIEW`
-- `OPEN_OR_UNRESOLVED`
 
 ## Useful Options
 

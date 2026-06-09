@@ -167,8 +167,6 @@ def grouped_results(
     }
     for result in results:
         bucket = bucket_for_result(result, closed_status)
-        if bucket == BUCKET_CLOSED:
-            continue
         grouped[bucket].append(result)
         if bucket != BUCKET_NOT_CLOSED:
             grouped[BUCKET_CLOSED].append(result)
