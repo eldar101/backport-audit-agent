@@ -247,5 +247,26 @@ def prompt_missing_auth(
         raise ValueError("Jira token is required.")
     if not github_token:
         raise ValueError("GitHub token is required.")
+    if is_placeholder_secret(jira_token):
+        raise ValueError(
+            "Jira token looks like a placeholder. Set JIRA_API_TOKEN to your real Jira token, "
+            "or unset it and let the tool prompt."
+        )
+    if is_placeholder_secret(github_token):
+        raise ValueError(
+            "GitHub token looks like a placeholder. Set GITHUB_TOKEN/GH_TOKEN to a real token, "
+            "or unset it and let the tool reuse gh auth or prompt."
+        )
 
     return jira_user, jira_token, github_token
+
+
+def is_placeholder_secret(value: str) -> bool:
+    normalized = value.strip().upper()
+    return normalized in {
+        "YOUR_JIRA_TOKEN",
+        "YOUR_GITHUB_TOKEN",
+        "YOUR_TOKEN",
+        "PASTE_TOKEN_HERE",
+        "TOKEN",
+    }
