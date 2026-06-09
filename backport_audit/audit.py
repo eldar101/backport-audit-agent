@@ -65,10 +65,12 @@ def run_audit(
     verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []
-    for index, issue in enumerate(issues, start=1):
-        console.print(f"[cyan]Auditing {index}/{len(issues)} {issue.key}[/cyan] {issue.summary}")
+    closed_total = count_closed_issues(issues, closed_status)
+    closed_index = 0
+    for issue in issues:
         pr_details = []
         if not is_closed_issue(issue, closed_status):
+            console.print(f"[cyan]Skipping open {issue.key}[/cyan] {issue.summary}")
             status_evidence = (
                 f"Jira status is {issue.status}; resolution is {issue.resolution or '-'}"
             )
@@ -78,6 +80,10 @@ def run_audit(
                 evidence=[status_evidence],
             )
         else:
+            closed_index += 1
+            console.print(
+                f"[cyan]Auditing {closed_index}/{closed_total} {issue.key}[/cyan] {issue.summary}"
+            )
             pr_refs = discover_pull_requests(
                 issue,
                 jira=jira,
@@ -191,3 +197,7 @@ def build_summary(
 
 def is_closed_issue(issue, closed_status: str) -> bool:
     return issue.status.strip().lower() == closed_status.strip().lower()
+
+
+def count_closed_issues(issues, closed_status: str) -> int:
+    return sum(1 for issue in issues if is_closed_issue(issue, closed_status))
