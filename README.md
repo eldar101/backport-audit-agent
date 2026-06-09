@@ -162,11 +162,23 @@ export GITHUB_TOKEN='github_pat_or_classic_token'
 
 ## Usage
 
-Basic run:
+Quick run with existing auth:
 
 ```bash
 backport-audit audit \
-  --jira-url "$JIRA_BASE_URL" \
+  --project EDM \
+  --fix-version 1.2.0-rc1 \
+  --repo flightctl/flightctl
+```
+
+This reuses `gh auth token` for GitHub if no GitHub token env var is set. It also
+tries Jira environment variables and common Jira CLI config files before prompting.
+
+Basic run with an explicit Jira URL:
+
+```bash
+backport-audit audit \
+  --jira-url https://jira.example.com \
   --project EDM \
   --fix-version 1.2.0-rc1 \
   --repo flightctl/flightctl
