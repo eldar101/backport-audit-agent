@@ -45,12 +45,12 @@ def audit(
     ] = None,
     issue_type: Annotated[
         str | None,
-        typer.Option("--issue-type", help="Jira issue type to audit. Defaults to Bug."),
-    ] = "Bug",
-    all_issue_types: Annotated[
-        bool,
-        typer.Option("--all-issue-types", help="Do not add an issuetype filter to generated JQL."),
-    ] = False,
+        typer.Option("--issue-type", help="Optional Jira issue type filter, for example Bug."),
+    ] = None,
+    closed_status: Annotated[
+        str,
+        typer.Option("--closed-status", help="Jira status treated as closed."),
+    ] = "Closed",
     jql: Annotated[
         str | None,
         typer.Option("--jql", help="Exact JQL to use instead of generated fixVersion JQL."),
@@ -76,7 +76,6 @@ def audit(
 
     target_branch = target_branch or derive_target_branch(fix_version)
     clone_dir = clone_dir or Path(".cache") / repo.replace("/", "-")
-    issue_type = None if all_issue_types else issue_type
 
     jira_user, jira_token, github_token = prompt_missing_auth(
         jira_base_url=jira_url,
@@ -99,6 +98,7 @@ def audit(
         jira_project=project,
         issue_type=issue_type,
         jql_override=jql,
+        closed_status=closed_status,
         github_repo=repo,
         console=console,
     )

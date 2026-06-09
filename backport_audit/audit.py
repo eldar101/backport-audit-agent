@@ -26,6 +26,7 @@ def run_audit(
     jira_project: str | None,
     issue_type: str | None,
     jql_override: str | None,
+    closed_status: str,
     github_repo: str,
     console: Console,
 ) -> tuple[AuditSummary, list[IssueAuditResult]]:
@@ -41,12 +42,13 @@ def run_audit(
         issue_type=issue_type,
         jql_override=jql_override,
     )
+    console.print(f"[bold]Closed status:[/bold] {closed_status}")
     if not issues:
         console.print(
             "[yellow]Jira returned 0 issues. Try --all-issue-types or --jql with the exact "
             "query that works in Jira.[/yellow]"
         )
-        return build_summary(fix_version, target_branch, []), []
+        return build_summary(fix_version, target_branch, [], closed_status), []
     verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []
@@ -71,7 +73,7 @@ def run_audit(
                     )
                 )
 
-        if not issue.is_closed:
+        if not is_closed_issue(issue, closed_status):
             status_evidence = (
                 f"Jira status is {issue.status}; resolution is {issue.resolution or '-'}"
             )
@@ -102,7 +104,7 @@ def run_audit(
             )
         )
 
-    return build_summary(fix_version, target_branch, results), results
+    return build_summary(fix_version, target_branch, results, closed_status), results
 
 
 def _best_pr_verification(
@@ -146,9 +148,10 @@ def build_summary(
     fix_version: str,
     target_branch: str,
     results: list[IssueAuditResult],
+    closed_status: str = "Closed",
 ) -> AuditSummary:
     counts = Counter(result.verification.status for result in results)
-    closed = [result for result in results if result.issue.is_closed]
+    closed = [result for result in results if is_closed_issue(result.issue, closed_status)]
     closed_with_pr = [result for result in closed if result.pull_requests]
     return AuditSummary(
         fix_version=fix_version,
@@ -165,3 +168,7 @@ def build_summary(
         pr_not_merged=counts[AuditStatus.PR_NOT_MERGED],
         errors=counts[AuditStatus.ERROR],
     )
+
+
+def is_closed_issue(issue, closed_status: str) -> bool:
+    return issue.status.strip().lower() == closed_status.strip().lower()

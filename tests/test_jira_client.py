@@ -64,7 +64,7 @@ def test_search_bugs_uses_jira_cloud_enhanced_search():
     assert issues[0].key == "PROJ-1"
     assert client.session.posts[0][0] == "https://jira.example.com/rest/api/3/search/jql"
     assert client.session.posts[0][1]["jql"] == (
-        'project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = "Bug"'
+        'project = PROJ AND fixVersion in ("1.2.0-rc1")'
     )
 
 
@@ -99,7 +99,13 @@ def test_jira_text_extracts_atlassian_document_format_text():
     ) == "hello\n world"
 
 
-def test_build_jql_can_skip_issue_type_filter():
+def test_build_jql_can_add_issue_type_filter():
+    assert build_jql(fix_version="1.2.0-rc1", project="PROJ", issue_type="Bug") == (
+        'project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = "Bug"'
+    )
+
+
+def test_build_jql_defaults_to_no_issue_type_filter():
     assert build_jql(fix_version="1.2.0-rc1", project="PROJ", issue_type=None) == (
         'project = PROJ AND fixVersion in ("1.2.0-rc1")'
     )

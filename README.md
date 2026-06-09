@@ -201,31 +201,33 @@ backport-audit audit \
   --repo example/service
 ```
 
-By default, `1.2.0-rc1` maps to `release-1.2`.
+By default, `1.2.0-rc1` maps to `release-1.2`. Use `--target-branch` when your
+backport branch does not match that default.
 
-By default, generated JQL includes `issuetype = "Bug"`:
+By default, generated JQL matches all issues in the fixVersion:
 
 ```text
-project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = "Bug"
+project = PROJ AND fixVersion in ("1.2.0-rc1")
 ```
 
-If your Jira project uses a different issue type name, pass it explicitly:
+If you only want a specific issue type, pass it explicitly:
 
 ```bash
 backport-audit audit \
   --project PROJ \
   --fix-version 1.2.0-rc1 \
-  --issue-type Defect \
+  --issue-type Bug \
   --repo example/service
 ```
 
-To remove the issue type filter:
+The closed bucket uses `status = Closed` by default. Override it if your Jira
+workflow uses another terminal status:
 
 ```bash
 backport-audit audit \
   --project PROJ \
   --fix-version 1.2.0-rc1 \
-  --all-issue-types \
+  --closed-status Done \
   --repo example/service
 ```
 

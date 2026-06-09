@@ -21,7 +21,7 @@ class JiraClient:
         self,
         fix_version: str,
         project: str | None = None,
-        issue_type: str | None = "Bug",
+        issue_type: str | None = None,
         jql_override: str | None = None,
     ) -> list[JiraIssue]:
         jql = jql_override or build_jql(
@@ -40,7 +40,7 @@ class JiraClient:
         *,
         fix_version: str,
         project: str | None = None,
-        issue_type: str | None = "Bug",
+        issue_type: str | None = None,
     ) -> str:
         return build_jql(fix_version=fix_version, project=project, issue_type=issue_type)
 
@@ -151,7 +151,7 @@ def build_jql(
     *,
     fix_version: str,
     project: str | None = None,
-    issue_type: str | None = "Bug",
+    issue_type: str | None = None,
 ) -> str:
     jql_parts = [f'fixVersion in ("{fix_version}")']
     if issue_type:
