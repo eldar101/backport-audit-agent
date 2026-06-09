@@ -40,9 +40,8 @@ def test_build_summary_uses_requested_audit_buckets():
     assert summary.closed_bugs == 6
     assert summary.not_closed_bugs == 1
     assert summary.closed_with_pr_backported == 2
-    assert summary.closed_with_pr_not_backported == 2
+    assert summary.closed_with_pr_not_backported == 3
     assert summary.closed_without_pr == 1
-    assert summary.closed_with_pr_needs_review == 1
 
 
 def audit_result(issue_key: str, issue_status: str, audit_status: AuditStatus) -> IssueAuditResult:

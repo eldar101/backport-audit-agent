@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections import Counter
-
 from rich.console import Console
 
 from backport_audit.git_verifier import GitVerifier
@@ -180,11 +178,11 @@ def build_summary(
     results: list[IssueAuditResult],
     closed_status: str = "Closed",
 ) -> AuditSummary:
-    counts = Counter(result.verification.status for result in results)
     closed = [result for result in results if is_closed_issue(result.issue, closed_status)]
     return AuditSummary(
         fix_version=fix_version,
         target_branch=target_branch,
+        closed_status=closed_status,
         total_bugs=len(results),
         closed_bugs=len(closed),
         not_closed_bugs=len(results) - len(closed),
@@ -194,11 +192,14 @@ def build_summary(
         ),
         closed_with_pr_not_backported=count_statuses(
             closed,
-            {AuditStatus.NOT_BACKPORTED, AuditStatus.PR_NOT_MERGED},
+            {
+                AuditStatus.NOT_BACKPORTED,
+                AuditStatus.PR_NOT_MERGED,
+                AuditStatus.MANUAL_REVIEW,
+                AuditStatus.ERROR,
+            },
         ),
-        closed_without_pr=counts[AuditStatus.CLOSED_NO_PR],
-        closed_with_pr_needs_review=count_statuses(closed, {AuditStatus.MANUAL_REVIEW}),
-        errors=counts[AuditStatus.ERROR],
+        closed_without_pr=count_statuses(closed, {AuditStatus.CLOSED_NO_PR}),
     )
 
 

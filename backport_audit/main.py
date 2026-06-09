@@ -127,6 +127,7 @@ def audit(
         output_dir=output_dir,
         summary=summary,
         results=results,
+        jira_url=jira_url,
     )
     console.print()
     console.print("[green]Reports written:[/green]")

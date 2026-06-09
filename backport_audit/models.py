@@ -72,11 +72,10 @@ class IssueAuditResult:
 class AuditSummary:
     fix_version: str
     target_branch: str
+    closed_status: str
     total_bugs: int
     closed_bugs: int
     not_closed_bugs: int
     closed_with_pr_backported: int
     closed_with_pr_not_backported: int
     closed_without_pr: int
-    closed_with_pr_needs_review: int
-    errors: int
