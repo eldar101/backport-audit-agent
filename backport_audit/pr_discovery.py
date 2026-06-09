@@ -26,8 +26,9 @@ def discover_pull_requests(
         for ref in extract_pr_refs(text):
             refs[(ref.repo, ref.number)] = ref
 
-    for ref in github.search_prs(default_repo, issue.key):
-        refs[(ref.repo, ref.number)] = ref
+    if not refs:
+        for ref in github.search_prs(default_repo, issue.key):
+            refs[(ref.repo, ref.number)] = ref
 
     return sorted(refs.values(), key=lambda ref: (ref.repo, ref.number))
 

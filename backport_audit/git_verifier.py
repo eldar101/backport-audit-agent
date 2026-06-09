@@ -11,6 +11,9 @@ class GitVerifier:
     def __init__(self, repo_dir: str | Path, github_repo: str) -> None:
         self.repo_dir = Path(repo_dir).expanduser().resolve()
         self.github_repo = github_repo
+        self._target_refs: dict[str, str] = {}
+        self._target_patch_ids: dict[str, dict[str, str]] = {}
+        self._commit_patch_ids: dict[str, list[str]] = {}
 
     def ensure_repo(self) -> None:
         if (self.repo_dir / ".git").exists():
@@ -102,9 +105,12 @@ class GitVerifier:
         )
 
     def _resolve_target_ref(self, target_branch: str) -> str:
+        if target_branch in self._target_refs:
+            return self._target_refs[target_branch]
         for ref in (f"origin/{target_branch}", target_branch):
             result = self._git(["rev-parse", "--verify", ref])
             if result.returncode == 0:
+                self._target_refs[target_branch] = ref
                 return ref
         raise RuntimeError(f"Target branch '{target_branch}' was not found locally or on origin.")
 
@@ -133,6 +139,8 @@ class GitVerifier:
         return None
 
     def _patch_ids_for_range(self, target_ref: str) -> dict[str, str]:
+        if target_ref in self._target_patch_ids:
+            return self._target_patch_ids[target_ref]
         result = self._git(["log", target_ref, "--format=%H", "--no-merges", "-n", "5000"])
         if result.returncode != 0:
             return {}
@@ -140,20 +148,25 @@ class GitVerifier:
         for commit in [line.strip() for line in result.stdout.splitlines() if line.strip()]:
             for patch_id in self._patch_ids_for_commit(commit):
                 patch_ids[patch_id] = commit
+        self._target_patch_ids[target_ref] = patch_ids
         return patch_ids
 
     def _patch_ids_for_commit(self, commit: str) -> list[str]:
+        if commit in self._commit_patch_ids:
+            return self._commit_patch_ids[commit]
         show = self._git(["show", "--format=", "--no-ext-diff", commit])
         if show.returncode != 0 or not show.stdout.strip():
             return []
         patch_id = run_git_with_input(["patch-id", "--stable"], cwd=self.repo_dir, data=show.stdout)
         if patch_id.returncode != 0:
             return []
-        return [
+        patch_ids = [
             line.split()[0]
             for line in patch_id.stdout.splitlines()
             if line.strip() and len(line.split()) >= 1
         ]
+        self._commit_patch_ids[commit] = patch_ids
+        return patch_ids
 
     def _metadata_hits(
         self,

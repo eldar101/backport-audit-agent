@@ -65,32 +65,9 @@ def run_audit(
     verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []
-    for issue in issues:
-        console.print(f"[cyan]Auditing {issue.key}[/cyan] {issue.summary}")
-        pr_refs = discover_pull_requests(
-            issue,
-            jira=jira,
-            github=github,
-            default_repo=github_repo,
-        )
+    for index, issue in enumerate(issues, start=1):
+        console.print(f"[cyan]Auditing {index}/{len(issues)} {issue.key}[/cyan] {issue.summary}")
         pr_details = []
-        for ref in pr_refs:
-            try:
-                pr_details.append(github.get_pr(ref))
-            except Exception as exc:  # noqa: BLE001
-                results.append(
-                    IssueAuditResult(
-                        issue=issue,
-                        pull_requests=[],
-                        verification=VerificationResult(
-                            status=AuditStatus.ERROR,
-                            method="github_pr_lookup",
-                            error=str(exc),
-                            evidence=[f"Failed to fetch {ref.url}"],
-                        ),
-                    )
-                )
-
         if not is_closed_issue(issue, closed_status):
             status_evidence = (
                 f"Jira status is {issue.status}; resolution is {issue.resolution or '-'}"
@@ -100,19 +77,43 @@ def run_audit(
                 method="jira_status",
                 evidence=[status_evidence],
             )
-        elif not pr_details:
-            verification = VerificationResult(
-                status=AuditStatus.CLOSED_NO_PR,
-                method="pr_discovery",
-                evidence=["Closed Jira bug has no discovered GitHub PR link"],
-            )
         else:
-            verification = _best_pr_verification(
-                issue_key=issue.key,
-                prs=pr_details,
-                verifier=verifier,
-                target_branch=target_branch,
+            pr_refs = discover_pull_requests(
+                issue,
+                jira=jira,
+                github=github,
+                default_repo=github_repo,
             )
+            for ref in pr_refs:
+                try:
+                    pr_details.append(github.get_pr(ref))
+                except Exception as exc:  # noqa: BLE001
+                    results.append(
+                        IssueAuditResult(
+                            issue=issue,
+                            pull_requests=[],
+                            verification=VerificationResult(
+                                status=AuditStatus.ERROR,
+                                method="github_pr_lookup",
+                                error=str(exc),
+                                evidence=[f"Failed to fetch {ref.url}"],
+                            ),
+                        )
+                    )
+
+            if not pr_details:
+                verification = VerificationResult(
+                    status=AuditStatus.CLOSED_NO_PR,
+                    method="pr_discovery",
+                    evidence=["Closed Jira bug has no discovered GitHub PR link"],
+                )
+            else:
+                verification = _best_pr_verification(
+                    issue_key=issue.key,
+                    prs=pr_details,
+                    verifier=verifier,
+                    target_branch=target_branch,
+                )
 
         results.append(
             IssueAuditResult(
