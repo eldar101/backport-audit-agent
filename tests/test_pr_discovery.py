@@ -7,8 +7,8 @@ def test_derive_target_branch_from_rc_fix_version():
 
 
 def test_extract_pr_refs_from_github_urls():
-    refs = extract_pr_refs("Fixed by https://github.com/flightctl/flightctl/pull/3012")
+    refs = extract_pr_refs("Fixed by https://github.com/example/service/pull/3012")
 
     assert len(refs) == 1
-    assert refs[0].repo == "flightctl/flightctl"
+    assert refs[0].repo == "example/service"
     assert refs[0].number == 3012

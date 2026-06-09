@@ -183,9 +183,9 @@ Quick run with existing auth:
 
 ```bash
 backport-audit audit \
-  --project EDM \
+  --project PROJ \
   --fix-version 1.2.0-rc1 \
-  --repo flightctl/flightctl
+  --repo example/service
 ```
 
 This reuses `gh auth token` for GitHub if no GitHub token env var is set. It also
@@ -196,9 +196,9 @@ Basic run with an explicit Jira URL:
 ```bash
 backport-audit audit \
   --jira-url https://jira.example.com \
-  --project EDM \
+  --project PROJ \
   --fix-version 1.2.0-rc1 \
-  --repo flightctl/flightctl
+  --repo example/service
 ```
 
 By default, `1.2.0-rc1` maps to `release-1.2`.
@@ -209,8 +209,8 @@ Override the target branch:
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
   --target-branch release-1.2 \
-  --repo flightctl/flightctl \
-  --project EDM
+  --repo example/service \
+  --project PROJ
 ```
 
 Use a specific local clone directory for git verification:
@@ -218,8 +218,8 @@ Use a specific local clone directory for git verification:
 ```bash
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
-  --repo flightctl/flightctl \
-  --clone-dir /tmp/flightctl-backport-audit
+  --repo example/service \
+  --clone-dir /tmp/service-backport-audit
 ```
 
 If `--clone-dir` is omitted, the tool clones or reuses:
@@ -241,7 +241,7 @@ Override output location:
 ```bash
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
-  --repo flightctl/flightctl \
+  --repo example/service \
   --output-dir /tmp/backport-report
 ```
 

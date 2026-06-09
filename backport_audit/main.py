@@ -41,7 +41,7 @@ def audit(
     ] = None,
     project: Annotated[
         str | None,
-        typer.Option("--project", help="Optional Jira project key, for example EDM."),
+        typer.Option("--project", help="Optional Jira project key, for example PROJ."),
     ] = None,
     target_branch: Annotated[
         str | None,
