@@ -203,6 +203,41 @@ backport-audit audit \
 
 By default, `1.2.0-rc1` maps to `release-1.2`.
 
+By default, generated JQL includes `issuetype = "Bug"`:
+
+```text
+project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = "Bug"
+```
+
+If your Jira project uses a different issue type name, pass it explicitly:
+
+```bash
+backport-audit audit \
+  --project PROJ \
+  --fix-version 1.2.0-rc1 \
+  --issue-type Defect \
+  --repo example/service
+```
+
+To remove the issue type filter:
+
+```bash
+backport-audit audit \
+  --project PROJ \
+  --fix-version 1.2.0-rc1 \
+  --all-issue-types \
+  --repo example/service
+```
+
+To use the exact JQL that works in Jira:
+
+```bash
+backport-audit audit \
+  --fix-version 1.2.0-rc1 \
+  --jql 'project = PROJ AND fixVersion in ("1.2.0-rc1")' \
+  --repo example/service
+```
+
 Override the target branch:
 
 ```bash

@@ -24,10 +24,29 @@ def run_audit(
     fix_version: str,
     target_branch: str,
     jira_project: str | None,
+    issue_type: str | None,
+    jql_override: str | None,
     github_repo: str,
     console: Console,
 ) -> tuple[AuditSummary, list[IssueAuditResult]]:
-    issues = jira.search_bugs(fix_version, jira_project)
+    jql = jql_override or jira.build_jql(
+        fix_version=fix_version,
+        project=jira_project,
+        issue_type=issue_type,
+    )
+    console.print(f"[bold]Jira JQL:[/bold] {jql}")
+    issues = jira.search_bugs(
+        fix_version,
+        jira_project,
+        issue_type=issue_type,
+        jql_override=jql_override,
+    )
+    if not issues:
+        console.print(
+            "[yellow]Jira returned 0 issues. Try --all-issue-types or --jql with the exact "
+            "query that works in Jira.[/yellow]"
+        )
+        return build_summary(fix_version, target_branch, []), []
     verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []

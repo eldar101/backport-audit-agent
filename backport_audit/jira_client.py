@@ -17,16 +17,32 @@ class JiraClient:
         else:
             self.session.headers.update({"Authorization": f"Bearer {token}"})
 
-    def search_bugs(self, fix_version: str, project: str | None = None) -> list[JiraIssue]:
-        jql_parts = [f'fixVersion in ("{fix_version}")', "issuetype = Bug"]
-        if project:
-            jql_parts.insert(0, f"project = {project}")
-        jql = " AND ".join(jql_parts)
+    def search_bugs(
+        self,
+        fix_version: str,
+        project: str | None = None,
+        issue_type: str | None = "Bug",
+        jql_override: str | None = None,
+    ) -> list[JiraIssue]:
+        jql = jql_override or build_jql(
+            fix_version=fix_version,
+            project=project,
+            issue_type=issue_type,
+        )
 
         try:
             return self._search_bugs_cloud(jql)
         except LegacySearchRequired:
             return self._search_bugs_legacy(jql)
+
+    @staticmethod
+    def build_jql(
+        *,
+        fix_version: str,
+        project: str | None = None,
+        issue_type: str | None = "Bug",
+    ) -> str:
+        return build_jql(fix_version=fix_version, project=project, issue_type=issue_type)
 
     def _search_bugs_cloud(self, jql: str) -> list[JiraIssue]:
         issues: list[JiraIssue] = []
@@ -76,13 +92,14 @@ class JiraClient:
             response = self.session.post(urljoin(self.base_url, "rest/api/2/search"), json=payload)
             response.raise_for_status()
             data = response.json()
-            for raw_issue in data.get("issues", []):
+            raw_issues = data.get("issues", [])
+            for raw_issue in raw_issues:
                 issue = self._parse_issue(raw_issue)
                 issue.remote_links.extend(self.get_remote_links(issue.key))
                 issues.append(issue)
 
-            start_at += len(data.get("issues", []))
-            if start_at >= data.get("total", 0) or not data.get("issues"):
+            start_at += len(raw_issues)
+            if start_at >= data.get("total", 0) or not raw_issues:
                 break
 
         return issues
@@ -128,6 +145,20 @@ class JiraClient:
 
 class LegacySearchRequired(Exception):
     pass
+
+
+def build_jql(
+    *,
+    fix_version: str,
+    project: str | None = None,
+    issue_type: str | None = "Bug",
+) -> str:
+    jql_parts = [f'fixVersion in ("{fix_version}")']
+    if issue_type:
+        jql_parts.append(f'issuetype = "{issue_type}"')
+    if project:
+        jql_parts.insert(0, f"project = {project}")
+    return " AND ".join(jql_parts)
 
 
 def search_fields() -> list[str]:

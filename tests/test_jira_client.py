@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from backport_audit.jira_client import JiraClient, jira_text
+from backport_audit.jira_client import JiraClient, build_jql, jira_text
 
 
 class FakeResponse:
@@ -64,7 +64,7 @@ def test_search_bugs_uses_jira_cloud_enhanced_search():
     assert issues[0].key == "PROJ-1"
     assert client.session.posts[0][0] == "https://jira.example.com/rest/api/3/search/jql"
     assert client.session.posts[0][1]["jql"] == (
-        'project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = Bug'
+        'project = PROJ AND fixVersion in ("1.2.0-rc1") AND issuetype = "Bug"'
     )
 
 
@@ -97,3 +97,17 @@ def test_jira_text_extracts_atlassian_document_format_text():
             ],
         }
     ) == "hello\n world"
+
+
+def test_build_jql_can_skip_issue_type_filter():
+    assert build_jql(fix_version="1.2.0-rc1", project="PROJ", issue_type=None) == (
+        'project = PROJ AND fixVersion in ("1.2.0-rc1")'
+    )
+
+
+def test_search_bugs_accepts_exact_jql_override():
+    client = JiraClient("https://jira.example.com", "user@example.com", "token")
+    client.session = FakeSession([FakeResponse(200, {"isLast": True, "issues": []})])
+
+    assert client.search_bugs("ignored", jql_override='project = PROJ AND labels = "foo"') == []
+    assert client.session.posts[0][1]["jql"] == 'project = PROJ AND labels = "foo"'
