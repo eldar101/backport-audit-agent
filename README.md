@@ -264,6 +264,9 @@ Manual review: 5
 
 ## Notes and Limitations
 
+- Jira Cloud search uses the enhanced `/rest/api/3/search/jql` endpoint. If that
+  endpoint is unavailable, the tool falls back to legacy `/rest/api/2/search` for
+  Jira Data Center or older Jira installations.
 - `git patch-id` checks the latest 5000 non-merge commits on the target branch.
 - Adapted backports may be marked `MANUAL_REVIEW` if the patch changed materially.
 - The tool currently searches GitHub PRs by Jira key in the configured repo. If a Jira

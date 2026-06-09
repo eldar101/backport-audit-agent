@@ -23,6 +23,46 @@ class JiraClient:
             jql_parts.insert(0, f"project = {project}")
         jql = " AND ".join(jql_parts)
 
+        try:
+            return self._search_bugs_cloud(jql)
+        except LegacySearchRequired:
+            return self._search_bugs_legacy(jql)
+
+    def _search_bugs_cloud(self, jql: str) -> list[JiraIssue]:
+        issues: list[JiraIssue] = []
+        next_page_token: str | None = None
+        max_results = 100
+
+        while True:
+            payload = {
+                "jql": jql,
+                "maxResults": max_results,
+                "fields": search_fields(),
+            }
+            if next_page_token:
+                payload["nextPageToken"] = next_page_token
+
+            response = self.session.post(
+                urljoin(self.base_url, "rest/api/3/search/jql"),
+                json=payload,
+            )
+            if response.status_code in {404, 405, 410}:
+                raise LegacySearchRequired
+            response.raise_for_status()
+            data = response.json()
+            raw_issues = data.get("issues", [])
+            for raw_issue in raw_issues:
+                issue = self._parse_issue(raw_issue)
+                issue.remote_links.extend(self.get_remote_links(issue.key))
+                issues.append(issue)
+
+            next_page_token = data.get("nextPageToken")
+            if data.get("isLast", True) or not next_page_token or not raw_issues:
+                break
+
+        return issues
+
+    def _search_bugs_legacy(self, jql: str) -> list[JiraIssue]:
         issues: list[JiraIssue] = []
         start_at = 0
         max_results = 100
@@ -31,14 +71,7 @@ class JiraClient:
                 "jql": jql,
                 "startAt": start_at,
                 "maxResults": max_results,
-                "fields": [
-                    "summary",
-                    "status",
-                    "resolution",
-                    "fixVersions",
-                    "description",
-                    "comment",
-                ],
+                "fields": search_fields(),
             }
             response = self.session.post(urljoin(self.base_url, "rest/api/2/search"), json=payload)
             response.raise_for_status()
@@ -56,8 +89,12 @@ class JiraClient:
 
     def get_remote_links(self, issue_key: str) -> list[str]:
         response = self.session.get(
-            urljoin(self.base_url, f"rest/api/2/issue/{issue_key}/remotelink")
+            urljoin(self.base_url, f"rest/api/3/issue/{issue_key}/remotelink")
         )
+        if response.status_code in {404, 405, 410}:
+            response = self.session.get(
+                urljoin(self.base_url, f"rest/api/2/issue/{issue_key}/remotelink")
+            )
         response.raise_for_status()
         links: list[str] = []
         for raw_link in response.json():
@@ -71,7 +108,7 @@ class JiraClient:
     def _parse_issue(raw_issue: dict) -> JiraIssue:
         fields = raw_issue.get("fields", {})
         comments = [
-            comment.get("body", "")
+            jira_text(comment.get("body", ""))
             for comment in (fields.get("comment") or {}).get("comments", [])
             if comment.get("body")
         ]
@@ -83,7 +120,39 @@ class JiraClient:
             if fields.get("resolution")
             else None,
             fix_versions=[item.get("name", "") for item in fields.get("fixVersions", [])],
-            description=fields.get("description") or "",
+            description=jira_text(fields.get("description") or ""),
             comments=comments,
             remote_links=[],
         )
+
+
+class LegacySearchRequired(Exception):
+    pass
+
+
+def search_fields() -> list[str]:
+    return [
+        "summary",
+        "status",
+        "resolution",
+        "fixVersions",
+        "description",
+        "comment",
+    ]
+
+
+def jira_text(value) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, list):
+        return "\n".join(part for part in (jira_text(item) for item in value) if part)
+    if not isinstance(value, dict):
+        return ""
+
+    if isinstance(value.get("text"), str):
+        return value["text"]
+    if isinstance(value.get("content"), list):
+        return jira_text(value["content"])
+    if isinstance(value.get("value"), str):
+        return value["value"]
+    return ""
