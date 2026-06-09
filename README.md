@@ -260,6 +260,20 @@ backport-audit audit \
   --project PROJ
 ```
 
+Route issues to another GitHub repository by matching text in the Jira summary:
+
+```bash
+backport-audit audit \
+  --fix-version 1.2.0-rc1 \
+  --target-branch release-1.2 \
+  --repo example/service \
+  --repo-route '[UI]=example/service-ui'
+```
+
+Issues whose summary contains `[UI]` are searched and verified in
+`example/service-ui`. Other issues use `example/service`. Routed repositories use
+the same `--target-branch` name.
+
 Use a specific local clone directory for git verification:
 
 ```bash

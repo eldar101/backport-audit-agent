@@ -18,6 +18,7 @@ from backport_audit.config import (
 from backport_audit.git_verifier import GitVerifier
 from backport_audit.github_client import GitHubClient
 from backport_audit.jira_client import JiraClient
+from backport_audit.repo_routing import default_clone_dir, parse_repo_route
 from backport_audit.report import print_summary, write_reports
 
 app = typer.Typer(help="Audit Jira bugs for release branch backport coverage.")
@@ -35,6 +36,13 @@ def version() -> None:
 def audit(
     fix_version: Annotated[str, typer.Option("--fix-version", prompt=True)],
     repo: Annotated[str, typer.Option("--repo", help="GitHub repo in owner/name form.")],
+    repo_route: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--repo-route",
+            help="Route issues whose summary contains MARKER to another repo, MARKER=owner/repo.",
+        ),
+    ] = None,
     jira_url: Annotated[
         str | None,
         typer.Option("--jira-url", help="Jira base URL."),
@@ -61,7 +69,10 @@ def audit(
     ] = None,
     clone_dir: Annotated[
         Path | None,
-        typer.Option("--clone-dir", help="Local clone used for git verification."),
+        typer.Option(
+            "--clone-dir",
+            help="Base clone directory. With routes, each repo gets a subdirectory.",
+        ),
     ] = None,
     output_dir: Annotated[
         Path,
@@ -75,7 +86,16 @@ def audit(
         raise typer.BadParameter("Jira base URL is required.")
 
     target_branch = target_branch or derive_target_branch(fix_version)
-    clone_dir = clone_dir or Path(".cache") / repo.replace("/", "-")
+    routes = [parse_repo_route(value) for value in repo_route or []]
+    repos = {repo, *(route.repo for route in routes)}
+    cache_root = Path(".cache")
+    verifiers = {
+        routed_repo: GitVerifier(
+            default_clone_dir(clone_dir, cache_root, routed_repo),
+            routed_repo,
+        )
+        for routed_repo in repos
+    }
 
     jira_user, jira_token, github_token = prompt_missing_auth(
         jira_base_url=jira_url,
@@ -87,12 +107,10 @@ def audit(
 
     jira = JiraClient(jira_url, jira_user, jira_token)
     github = GitHubClient(github_token)
-    verifier = GitVerifier(clone_dir, repo)
 
     summary, results = run_audit(
         jira=jira,
         github=github,
-        verifier=verifier,
         fix_version=fix_version,
         target_branch=target_branch,
         jira_project=project,
@@ -100,6 +118,8 @@ def audit(
         jql_override=jql,
         closed_status=closed_status,
         github_repo=repo,
+        repo_routes=routes,
+        verifiers=verifiers,
         console=console,
     )
     print_summary(console, summary, results)

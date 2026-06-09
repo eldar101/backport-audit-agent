@@ -14,13 +14,13 @@ from backport_audit.models import (
     VerificationResult,
 )
 from backport_audit.pr_discovery import discover_pull_requests
+from backport_audit.repo_routing import RepoRoute, select_repo_for_issue
 
 
 def run_audit(
     *,
     jira: JiraClient,
     github: GitHubClient,
-    verifier: GitVerifier,
     fix_version: str,
     target_branch: str,
     jira_project: str | None,
@@ -28,6 +28,8 @@ def run_audit(
     jql_override: str | None,
     closed_status: str,
     github_repo: str,
+    repo_routes: list[RepoRoute],
+    verifiers: dict[str, GitVerifier],
     console: Console,
 ) -> tuple[AuditSummary, list[IssueAuditResult]]:
     jql = jql_override or jira.build_jql(
@@ -62,7 +64,6 @@ def run_audit(
         )
         return build_summary(fix_version, target_branch, [], closed_status), []
     console.print(f"[green]Fetched {len(issues)} Jira issues.[/green]")
-    verifier.ensure_repo()
 
     results: list[IssueAuditResult] = []
     closed_total = count_closed_issues(issues, closed_status)
@@ -81,14 +82,18 @@ def run_audit(
             )
         else:
             closed_index += 1
+            issue_repo = select_repo_for_issue(issue, github_repo, repo_routes)
             console.print(
-                f"[cyan]Auditing {closed_index}/{closed_total} {issue.key}[/cyan] {issue.summary}"
+                f"[cyan]Auditing {closed_index}/{closed_total} {issue.key}[/cyan] "
+                f"[{issue_repo}] {issue.summary}"
             )
+            issue_verifier = verifiers[issue_repo]
+            issue_verifier.ensure_repo()
             pr_refs = discover_pull_requests(
                 issue,
                 jira=jira,
                 github=github,
-                default_repo=github_repo,
+                default_repo=issue_repo,
             )
             for ref in pr_refs:
                 try:
@@ -117,7 +122,7 @@ def run_audit(
                 verification = _best_pr_verification(
                     issue_key=issue.key,
                     prs=pr_details,
-                    verifier=verifier,
+                    verifier=issue_verifier,
                     target_branch=target_branch,
                 )
 
