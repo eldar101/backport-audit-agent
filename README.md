@@ -5,6 +5,14 @@ GitHub PRs made it into a release branch.
 
 It does not create backports. It only audits.
 
+## Requirements
+
+- Python 3.10+
+- Git
+- Network access to Jira and GitHub
+- Optional: GitHub CLI (`gh`) if you want the tool to reuse `gh auth login`
+- Optional: Jira CLI config if you want the tool to reuse an existing Jira URL/token
+
 ## Install
 
 ```bash
