@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 from backport_audit.models import AuditStatus, PullRequestDetails, VerificationResult
@@ -8,19 +9,32 @@ from backport_audit.util import run_git
 
 class GitVerifier:
     def __init__(self, repo_dir: str | Path, github_repo: str) -> None:
-        self.repo_dir = Path(repo_dir)
+        self.repo_dir = Path(repo_dir).expanduser().resolve()
         self.github_repo = github_repo
 
     def ensure_repo(self) -> None:
         if (self.repo_dir / ".git").exists():
-            self._git(["fetch", "--all", "--prune"])
+            result = self._git(["fetch", "--all", "--prune"])
+            if result.returncode != 0:
+                raise RuntimeError(f"git fetch failed: {result.stderr.strip()}")
             return
+        if self.repo_dir.exists():
+            if any(self.repo_dir.iterdir()):
+                raise RuntimeError(
+                    f"Clone directory {self.repo_dir} exists but is not a git repository. "
+                    "Pass --clone-dir with a clean path or remove that directory."
+                )
+            self.repo_dir.rmdir()
 
         self.repo_dir.parent.mkdir(parents=True, exist_ok=True)
         url = f"https://github.com/{self.github_repo}.git"
         result = run_git(["clone", url, str(self.repo_dir)], cwd=self.repo_dir.parent)
         if result.returncode != 0:
             raise RuntimeError(f"git clone failed: {result.stderr.strip()}")
+
+    def clear_invalid_cache(self) -> None:
+        if self.repo_dir.exists() and not (self.repo_dir / ".git").exists():
+            shutil.rmtree(self.repo_dir)
 
     def verify_pr(
         self,

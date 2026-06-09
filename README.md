@@ -269,6 +269,13 @@ backport-audit audit \
   --clone-dir /tmp/service-backport-audit
 ```
 
+If a previous run was interrupted during cloning, remove the cache directory or use a
+new `--clone-dir`:
+
+```bash
+rm -rf .cache
+```
+
 If `--clone-dir` is omitted, the tool clones or reuses:
 
 ```text
