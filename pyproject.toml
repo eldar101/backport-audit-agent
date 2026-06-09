@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "backport-audit-agent"
+version = "0.1.0"
+description = "Audit Jira bugs for release branch backport coverage."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Eldar Weiss" }
+]
+dependencies = [
+  "requests>=2.32.0",
+  "rich>=13.7.0",
+  "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "ruff>=0.5.0",
+]
+
+[project.scripts]
+backport-audit = "backport_audit.main:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backport_audit"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
