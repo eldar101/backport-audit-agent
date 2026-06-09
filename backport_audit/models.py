@@ -74,12 +74,9 @@ class AuditSummary:
     target_branch: str
     total_bugs: int
     closed_bugs: int
-    open_or_unresolved: int
-    closed_with_pr: int
+    not_closed_bugs: int
+    closed_with_pr_backported: int
+    closed_with_pr_not_backported: int
     closed_without_pr: int
-    backported_confirmed: int
-    probably_backported: int
-    not_backported: int
-    manual_review: int
-    pr_not_merged: int
+    closed_with_pr_needs_review: int
     errors: int

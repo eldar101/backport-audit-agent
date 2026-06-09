@@ -70,7 +70,14 @@ backport-audit audit \
 
 ## Output
 
-The console shows counts and progress.
+The console shows progress and these summary buckets:
+
+- bugs that are closed
+- bugs that are not closed
+- bugs that are closed, have PR, and are backported
+- bugs that are closed, have PR, and are not backported
+- bugs that are closed and do not have PR
+- bugs that are closed, have PR, and need manual review
 
 Reports are written to:
 

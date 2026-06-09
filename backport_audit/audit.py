@@ -182,20 +182,22 @@ def build_summary(
 ) -> AuditSummary:
     counts = Counter(result.verification.status for result in results)
     closed = [result for result in results if is_closed_issue(result.issue, closed_status)]
-    closed_with_pr = [result for result in closed if result.pull_requests]
     return AuditSummary(
         fix_version=fix_version,
         target_branch=target_branch,
         total_bugs=len(results),
         closed_bugs=len(closed),
-        open_or_unresolved=counts[AuditStatus.OPEN_OR_UNRESOLVED],
-        closed_with_pr=len(closed_with_pr),
+        not_closed_bugs=len(results) - len(closed),
+        closed_with_pr_backported=count_statuses(
+            closed,
+            {AuditStatus.BACKPORTED_CONFIRMED, AuditStatus.PROBABLY_BACKPORTED},
+        ),
+        closed_with_pr_not_backported=count_statuses(
+            closed,
+            {AuditStatus.NOT_BACKPORTED, AuditStatus.PR_NOT_MERGED},
+        ),
         closed_without_pr=counts[AuditStatus.CLOSED_NO_PR],
-        backported_confirmed=counts[AuditStatus.BACKPORTED_CONFIRMED],
-        probably_backported=counts[AuditStatus.PROBABLY_BACKPORTED],
-        not_backported=counts[AuditStatus.NOT_BACKPORTED],
-        manual_review=counts[AuditStatus.MANUAL_REVIEW],
-        pr_not_merged=counts[AuditStatus.PR_NOT_MERGED],
+        closed_with_pr_needs_review=count_statuses(closed, {AuditStatus.MANUAL_REVIEW}),
         errors=counts[AuditStatus.ERROR],
     )
 
@@ -206,3 +208,7 @@ def is_closed_issue(issue, closed_status: str) -> bool:
 
 def count_closed_issues(issues, closed_status: str) -> int:
     return sum(1 for issue in issues if is_closed_issue(issue, closed_status))
+
+
+def count_statuses(results, statuses: set[AuditStatus]) -> int:
+    return sum(1 for result in results if result.verification.status in statuses)
