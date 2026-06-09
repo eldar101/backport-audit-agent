@@ -36,7 +36,14 @@ def version() -> None:
 @app.command("audit")
 def audit(
     fix_version: Annotated[str, typer.Option("--fix-version", prompt=True)],
-    repo: Annotated[str, typer.Option("--repo", help="GitHub repo in owner/name form.")],
+    repo: Annotated[
+        str,
+        typer.Option(
+            "--repo",
+            "--github-repo",
+            help="GitHub repo in owner/name form.",
+        ),
+    ],
     repo_route: Annotated[
         list[str] | None,
         typer.Option(
@@ -50,7 +57,11 @@ def audit(
     ] = None,
     project: Annotated[
         str | None,
-        typer.Option("--project", help="Optional Jira project key, for example PROJ."),
+        typer.Option(
+            "--project",
+            "--jira-project",
+            help="Optional Jira project key, for example PROJ.",
+        ),
     ] = None,
     issue_type: Annotated[
         str | None,
@@ -66,7 +77,11 @@ def audit(
     ] = None,
     target_branch: Annotated[
         str | None,
-        typer.Option("--target-branch", help="Target branch. Defaults to release-MAJOR.MINOR."),
+        typer.Option(
+            "--target-branch",
+            "--release-branch",
+            help="Target branch. Defaults to release-MAJOR.MINOR.",
+        ),
     ] = None,
     clone_dir: Annotated[
         Path | None,

@@ -52,18 +52,18 @@ gh auth login
 ```bash
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
-  --target-branch release-1.2 \
-  --repo owner/repo
+  --release-branch release-1.2 \
+  --github-repo owner/repo
 ```
 
 Optional Jira project filter:
 
 ```bash
 backport-audit audit \
-  --project PROJ \
+  --jira-project PROJ \
   --fix-version 1.2.0-rc1 \
-  --target-branch release-1.2 \
-  --repo owner/repo
+  --release-branch release-1.2 \
+  --github-repo owner/repo
 ```
 
 If some Jira issues belong to another GitHub repo, route by title marker:
@@ -71,10 +71,16 @@ If some Jira issues belong to another GitHub repo, route by title marker:
 ```bash
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
-  --target-branch release-1.2 \
-  --repo owner/backend \
+  --release-branch release-1.2 \
+  --github-repo owner/backend \
   --repo-route '[UI]=owner/frontend'
 ```
+
+Short flag names are also supported:
+
+- `--project` is the same as `--jira-project`
+- `--repo` is the same as `--github-repo`
+- `--target-branch` is the same as `--release-branch`
 
 ## Output
 
