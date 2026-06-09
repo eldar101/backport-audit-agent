@@ -20,6 +20,7 @@ from backport_audit.github_client import GitHubClient
 from backport_audit.jira_client import JiraClient
 from backport_audit.repo_routing import default_clone_dir, parse_repo_route
 from backport_audit.report import print_summary, write_reports
+from backport_audit.util import validate_github_repo
 
 app = typer.Typer(help="Audit Jira bugs for release branch backport coverage.")
 console = Console()
@@ -85,6 +86,7 @@ def audit(
     if not jira_url:
         raise typer.BadParameter("Jira base URL is required.")
 
+    repo = validate_github_repo(repo)
     target_branch = target_branch or derive_target_branch(fix_version)
     routes = [parse_repo_route(value) for value in repo_route or []]
     repos = {repo, *(route.repo for route in routes)}

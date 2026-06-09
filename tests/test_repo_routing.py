@@ -13,6 +13,11 @@ def test_parse_repo_route():
     assert route.repo == "owner/ui"
 
 
+def test_parse_repo_route_rejects_invalid_repo():
+    with pytest.raises(ValueError, match="owner/repo"):
+        parse_repo_route("[UI]=owner/ui/extra")
+
+
 def test_parse_repo_route_rejects_bad_format():
     with pytest.raises(ValueError):
         parse_repo_route("[UI]")

@@ -151,7 +151,12 @@ def write_csv(
         writer.writeheader()
         for bucket, bucket_results in grouped.items():
             for result in bucket_results:
-                writer.writerow(result_to_dict(result, jira_url, bucket=bucket))
+                writer.writerow(
+                    {
+                        key: csv_safe(value)
+                        for key, value in result_to_dict(result, jira_url, bucket=bucket).items()
+                    }
+                )
 
 
 def grouped_results(
@@ -214,3 +219,11 @@ def short_evidence(result: IssueAuditResult) -> str:
 
 def _escape(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ")
+
+
+def csv_safe(value: str) -> str:
+    if not value:
+        return value
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{value}"
+    return value

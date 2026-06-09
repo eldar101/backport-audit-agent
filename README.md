@@ -117,3 +117,10 @@ Clean a broken local clone cache:
 ```bash
 rm -rf .cache
 ```
+
+## Safety Notes
+
+- Use read-only Jira and GitHub tokens when possible.
+- The tool runs `git` without a shell and only clones `https://github.com/owner/repo.git`.
+- CSV output is escaped so Jira text cannot run spreadsheet formulas when opened.
+- Reports can contain private Jira issue text and PR links. Do not publish them unless that data is public.

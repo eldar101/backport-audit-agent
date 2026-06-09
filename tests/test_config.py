@@ -45,7 +45,7 @@ github.com
 def test_is_placeholder_secret_detects_copy_paste_tokens():
     assert is_placeholder_secret("YOUR_JIRA_TOKEN")
     assert is_placeholder_secret("paste_token_here")
-    assert not is_placeholder_secret("ATATT3x-real-looking-token")
+    assert not is_placeholder_secret("real-token-value")
 
 
 def test_read_simple_yaml_mapping(tmp_path: Path):

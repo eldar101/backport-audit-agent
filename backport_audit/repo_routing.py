@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from backport_audit.models import JiraIssue
+from backport_audit.util import validate_github_repo
 
 
 @dataclass(frozen=True)
@@ -16,9 +17,7 @@ def parse_repo_route(value: str) -> RepoRoute:
     marker, separator, repo = value.partition("=")
     if not separator or not marker.strip() or not repo.strip():
         raise ValueError("Repo route must use MARKER=owner/repo format.")
-    if "/" not in repo:
-        raise ValueError("Repo route repository must use owner/repo format.")
-    return RepoRoute(marker=marker.strip(), repo=repo.strip())
+    return RepoRoute(marker=marker.strip(), repo=validate_github_repo(repo))
 
 
 def select_repo_for_issue(issue: JiraIssue, default_repo: str, routes: list[RepoRoute]) -> str:

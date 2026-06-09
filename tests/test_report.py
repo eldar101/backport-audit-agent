@@ -13,6 +13,7 @@ from backport_audit.report import (
     BUCKET_NO_PR,
     BUCKET_NOT_BACKPORTED,
     BUCKET_NOT_CLOSED,
+    csv_safe,
     grouped_results,
     render_markdown,
 )
@@ -64,6 +65,13 @@ def test_markdown_report_includes_issue_and_pr_links():
     assert "[PROJ-1](https://jira.example.com/browse/PROJ-1)" in markdown
     assert "[#123](https://github.com/owner/repo/pull/123)" in markdown
     assert BUCKET_BACKPORTED in markdown
+
+
+def test_csv_safe_neutralizes_spreadsheet_formulas():
+    assert csv_safe("=cmd|'/C calc'!A0") == "'=cmd|'/C calc'!A0"
+    assert csv_safe("+SUM(1,1)") == "'+SUM(1,1)"
+    assert csv_safe("@HYPERLINK(\"https://example.com\")") == "'@HYPERLINK(\"https://example.com\")"
+    assert csv_safe("normal text") == "normal text"
 
 
 def audit_result(
