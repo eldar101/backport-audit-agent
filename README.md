@@ -92,7 +92,7 @@ The console and report files show these buckets:
 - bugs that are closed, have PR, and are not backported
 - bugs that are closed and do not have PR
 
-The CSV and Markdown reports include Jira issue links and GitHub PR links.
+The CSV and Markdown reports include Jira issue links, Jira labels, and GitHub PR links.
 Each issue row includes its Jira status, discovered PR links, audit result, and
 the evidence used for that result.
 

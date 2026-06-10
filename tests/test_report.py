@@ -65,6 +65,7 @@ def test_markdown_report_includes_issue_and_pr_links():
 
     assert "[PROJ-1](https://jira.example.com/browse/PROJ-1)" in markdown
     assert "[#123](https://github.com/owner/repo/pull/123)" in markdown
+    assert "release-blocker, qe" in markdown
     assert BUCKET_BACKPORTED in markdown
 
 
@@ -87,6 +88,7 @@ def test_write_reports_defaults_to_markdown_and_csv(tmp_path):
     assert (tmp_path / "backport-audit-1.2.0-rc1.md").exists()
     assert (tmp_path / "backport-audit-1.2.0-rc1.csv").exists()
     assert not (tmp_path / "backport-audit-1.2.0-rc1.json").exists()
+    assert "release-blocker, qe" in (tmp_path / "backport-audit-1.2.0-rc1.csv").read_text()
 
 
 def test_write_reports_can_include_json(tmp_path):
@@ -129,6 +131,7 @@ def audit_result(
             summary="Fix bug",
             status=issue_status,
             resolution=None,
+            labels=["release-blocker", "qe"],
         ),
         pull_requests=[pull_request()] if with_pr else [],
         verification=VerificationResult(

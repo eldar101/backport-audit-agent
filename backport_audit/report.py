@@ -33,12 +33,14 @@ def print_summary(console: Console, summary: AuditSummary, results: list[IssueAu
     detail.add_column("Bucket")
     detail.add_column("Issue")
     detail.add_column("Status")
+    detail.add_column("Labels")
     detail.add_column("PRs")
     for result in results:
         detail.add_row(
             bucket_for_result(result, summary.closed_status),
             result.issue.key,
             result.issue.status,
+            format_labels(result.issue.labels),
             ", ".join(pr.ref.url for pr in result.pull_requests) or "-",
         )
     console.print(detail)
@@ -114,8 +116,8 @@ def render_markdown(
             [
                 f"## {bucket} ({len(bucket_results)})",
                 "",
-                "| Issue | Status | PRs | Result | Evidence |",
-                "| --- | --- | --- | --- | --- |",
+                "| Issue | Status | Labels | PRs | Result | Evidence |",
+                "| --- | --- | --- | --- | --- | --- |",
             ]
         )
         for result in bucket_results:
@@ -127,6 +129,7 @@ def render_markdown(
                     [
                         issue,
                         _escape(result.issue.status),
+                        _escape(format_labels(result.issue.labels)),
                         prs or "-",
                         result.verification.status.value,
                         _escape(short_evidence(result)),
@@ -152,6 +155,7 @@ def write_csv(
                 "issue_url",
                 "summary",
                 "jira_status",
+                "labels",
                 "result",
                 "pr_links",
                 "evidence",
@@ -212,6 +216,7 @@ def result_to_dict(
         "issue_url": issue_url(jira_url, result.issue.key),
         "summary": result.issue.summary,
         "jira_status": result.issue.status,
+        "labels": format_labels(result.issue.labels),
         "result": result.verification.status.value,
         "pr_links": " ".join(pr.ref.url for pr in result.pull_requests),
         "evidence": short_evidence(result),
@@ -224,6 +229,10 @@ def issue_url(jira_url: str, issue_key: str) -> str:
 
 def short_evidence(result: IssueAuditResult) -> str:
     return " | ".join(result.verification.evidence) or result.verification.error or ""
+
+
+def format_labels(labels: list[str]) -> str:
+    return ", ".join(labels)
 
 
 def _escape(value: str) -> str:

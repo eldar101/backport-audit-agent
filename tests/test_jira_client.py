@@ -49,6 +49,7 @@ def test_search_bugs_uses_jira_cloud_enhanced_search():
                                 "status": {"name": "Done"},
                                 "resolution": {"name": "Done"},
                                 "fixVersions": [{"name": "1.2.0-rc1"}],
+                                "labels": ["release-blocker", "qe"],
                                 "description": "",
                                 "comment": {"comments": []},
                             },
@@ -62,10 +63,12 @@ def test_search_bugs_uses_jira_cloud_enhanced_search():
     issues = client.search_bugs("1.2.0-rc1", "PROJ")
 
     assert issues[0].key == "PROJ-1"
+    assert issues[0].labels == ["release-blocker", "qe"]
     assert client.session.posts[0][0] == "https://jira.example.com/rest/api/3/search/jql"
     assert client.session.posts[0][1]["jql"] == (
         'project = PROJ AND fixVersion in ("1.2.0-rc1")'
     )
+    assert "labels" in client.session.posts[0][1]["fields"]
     assert client.session.gets == []
 
 

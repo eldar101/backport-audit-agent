@@ -157,6 +157,7 @@ class JiraClient:
             if fields.get("resolution")
             else None,
             fix_versions=[item.get("name", "") for item in fields.get("fixVersions", [])],
+            labels=[label for label in fields.get("labels", []) if label],
             description=jira_text(fields.get("description") or ""),
             comments=comments,
             remote_links=[],
@@ -205,6 +206,7 @@ def search_fields() -> list[str]:
         "status",
         "resolution",
         "fixVersions",
+        "labels",
         "description",
         "comment",
     ]

@@ -22,6 +22,7 @@ class JiraIssue:
     status: str
     resolution: str | None
     fix_versions: list[str] = field(default_factory=list)
+    labels: list[str] = field(default_factory=list)
     description: str = ""
     comments: list[str] = field(default_factory=list)
     remote_links: list[str] = field(default_factory=list)
