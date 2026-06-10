@@ -40,6 +40,7 @@ class PullRequestDetails:
     ref: PullRequestRef
     title: str
     body: str
+    author: str
     state: str
     merged: bool
     merge_commit_sha: str | None

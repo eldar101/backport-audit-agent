@@ -35,6 +35,7 @@ def print_summary(console: Console, summary: AuditSummary, results: list[IssueAu
     detail.add_column("Status")
     detail.add_column("Labels")
     detail.add_column("PRs")
+    detail.add_column("PR Creators")
     for result in results:
         detail.add_row(
             bucket_for_result(result, summary.closed_status),
@@ -42,6 +43,7 @@ def print_summary(console: Console, summary: AuditSummary, results: list[IssueAu
             result.issue.status,
             format_labels(result.issue.labels),
             ", ".join(pr.ref.url for pr in result.pull_requests) or "-",
+            format_pr_authors(result) or "-",
         )
     console.print(detail)
 
@@ -116,13 +118,13 @@ def render_markdown(
             [
                 f"## {bucket} ({len(bucket_results)})",
                 "",
-                "| Issue | Status | Labels | PRs | Result | Evidence |",
-                "| --- | --- | --- | --- | --- | --- |",
+                "| Issue | Status | Labels | PRs | PR Creators | Result | Evidence |",
+                "| --- | --- | --- | --- | --- | --- | --- |",
             ]
         )
         for result in bucket_results:
             issue = f"[{result.issue.key}]({issue_url(jira_url, result.issue.key)})"
-            prs = "<br>".join(f"[#{pr.ref.number}]({pr.ref.url})" for pr in result.pull_requests)
+            prs = "<br>".join(format_pr_link(pr) for pr in result.pull_requests)
             lines.append(
                 "| "
                 + " | ".join(
@@ -131,6 +133,7 @@ def render_markdown(
                         _escape(result.issue.status),
                         _escape(format_labels(result.issue.labels)),
                         prs or "-",
+                        _escape(format_pr_authors(result)) or "-",
                         result.verification.status.value,
                         _escape(short_evidence(result)),
                     ]
@@ -158,6 +161,7 @@ def write_csv(
                 "labels",
                 "result",
                 "pr_links",
+                "pr_authors",
                 "evidence",
             ],
         )
@@ -219,6 +223,7 @@ def result_to_dict(
         "labels": format_labels(result.issue.labels),
         "result": result.verification.status.value,
         "pr_links": " ".join(pr.ref.url for pr in result.pull_requests),
+        "pr_authors": format_pr_authors(result),
         "evidence": short_evidence(result),
     }
 
@@ -233,6 +238,17 @@ def short_evidence(result: IssueAuditResult) -> str:
 
 def format_labels(labels: list[str]) -> str:
     return ", ".join(labels)
+
+
+def format_pr_link(pr) -> str:
+    suffix = f" (@{pr.author})" if pr.author else ""
+    return f"[#{pr.ref.number}]({pr.ref.url}){suffix}"
+
+
+def format_pr_authors(result: IssueAuditResult) -> str:
+    return ", ".join(
+        dict.fromkeys(pr.author for pr in result.pull_requests if pr.author)
+    )
 
 
 def _escape(value: str) -> str:

@@ -35,6 +35,7 @@ class GitHubClient:
             ref=ref,
             title=pr.get("title") or "",
             body=pr.get("body") or "",
+            author=(pr.get("user") or {}).get("login") or "",
             state=pr.get("state") or "",
             merged=bool(pr.get("merged")),
             merge_commit_sha=pr.get("merge_commit_sha"),
