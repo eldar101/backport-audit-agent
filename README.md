@@ -92,9 +92,15 @@ The console and report files show these buckets:
 - bugs that are closed, have PR, and are not backported
 - bugs that are closed and do not have PR
 
-The CSV and Markdown reports include Jira issue links, Jira labels, GitHub PR links,
-and PR creators. Each issue row includes its Jira status, discovered PR links,
-audit result, and the evidence used for that result.
+The CSV and Markdown reports include:
+
+- Jira issue links
+- Jira status
+- Jira labels
+- GitHub PR links
+- PR creators
+- audit result
+- evidence used for the result
 
 Reports are written to:
 
@@ -113,8 +119,8 @@ Use exact Jira JQL:
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
   --jql 'fixVersion in ("1.2.0-rc1")' \
-  --target-branch release-1.2 \
-  --repo owner/repo
+  --release-branch release-1.2 \
+  --github-repo owner/repo
 ```
 
 Use a different closed status:
@@ -123,8 +129,8 @@ Use a different closed status:
 backport-audit audit \
   --fix-version 1.2.0-rc1 \
   --closed-status Done \
-  --target-branch release-1.2 \
-  --repo owner/repo
+  --release-branch release-1.2 \
+  --github-repo owner/repo
 ```
 
 Clean a broken local clone cache:
@@ -138,4 +144,5 @@ rm -rf .cache
 - Use read-only Jira and GitHub tokens when possible.
 - The tool runs `git` without a shell and only clones `https://github.com/owner/repo.git`.
 - CSV output is escaped so Jira text cannot run spreadsheet formulas when opened.
-- Reports can contain private Jira issue text and PR links. Do not publish them unless that data is public.
+- Reports can contain private Jira issue text, labels, PR links, and PR creators.
+  Do not publish them unless that data is public.
