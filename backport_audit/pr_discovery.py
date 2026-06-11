@@ -14,6 +14,7 @@ def discover_pull_requests(
     jira: JiraClient | None = None,
     github: GitHubClient,
     default_repo: str,
+    search_repos: list[str] | None = None,
 ) -> list[PullRequestRef]:
     refs: dict[tuple[str, int], PullRequestRef] = {}
     if jira and not issue.remote_links:
@@ -26,8 +27,9 @@ def discover_pull_requests(
         for ref in extract_pr_refs(text):
             refs[(ref.repo, ref.number)] = ref
 
-    if not refs:
-        for ref in github.search_prs(default_repo, issue.key):
+    repos = list(dict.fromkeys([default_repo, *(search_repos or [])]))
+    for repo in repos:
+        for ref in github.search_prs(repo, issue.key):
             refs[(ref.repo, ref.number)] = ref
 
     return sorted(refs.values(), key=lambda ref: (ref.repo, ref.number))

@@ -3,6 +3,7 @@ from __future__ import annotations
 from urllib.parse import quote
 
 import requests
+from requests import HTTPError
 
 from backport_audit.models import PullRequestDetails, PullRequestRef
 
@@ -56,7 +57,12 @@ class GitHubClient:
             parts.append(f"base:{base_branch}")
         raw_query = " ".join(parts)
         url = f"https://api.github.com/search/issues?q={quote(raw_query)}"
-        data = self._get(url)
+        try:
+            data = self._get(url)
+        except HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in {403, 422}:
+                return []
+            raise
         refs: list[PullRequestRef] = []
         for item in data.get("items", []):
             if "pull_request" not in item:

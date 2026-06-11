@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shutil
 from pathlib import Path
 
@@ -46,16 +47,9 @@ class GitVerifier:
         pr: PullRequestDetails,
         target_branch: str,
     ) -> VerificationResult:
-        if not pr.merged:
-            return VerificationResult(
-                status=AuditStatus.PR_NOT_MERGED,
-                method="github_pr_state",
-                evidence=[f"{pr.ref.url} is not merged"],
-            )
-
         target_ref = self._resolve_target_ref(target_branch)
         merge_sha = pr.merge_commit_sha
-        if merge_sha and self._is_ancestor(merge_sha, target_ref):
+        if pr.merged and merge_sha and self._is_ancestor(merge_sha, target_ref):
             return VerificationResult(
                 status=AuditStatus.BACKPORTED_CONFIRMED,
                 method="merge_commit_ancestor",
@@ -72,6 +66,7 @@ class GitVerifier:
                     evidence=[f"{target_ref} contains '{marker}' in commit {found[0]}"],
                 )
 
+        self._ensure_pr_commits_available(pr)
         patch_match = self._patch_id_match(pr.commits, target_ref)
         if patch_match:
             return VerificationResult(
@@ -96,6 +91,13 @@ class GitVerifier:
                     "Release branch has commits touching one or more changed files, "
                     "but no exact backport evidence was found."
                 ],
+            )
+
+        if not pr.merged:
+            return VerificationResult(
+                status=AuditStatus.PR_NOT_MERGED,
+                method="github_pr_state",
+                evidence=[f"{pr.ref.url} is not merged and no backport evidence was found"],
             )
 
         return VerificationResult(
@@ -135,8 +137,24 @@ class GitVerifier:
                     return (
                         f"Patch-id {patch_id} from source commit {source_sha} exists on "
                         f"{target_ref} as {target_patch_ids[patch_id]}"
-                    )
+                )
         return None
+
+    def _ensure_pr_commits_available(self, pr: PullRequestDetails) -> None:
+        missing = [
+            commit
+            for commit in pr.commits
+            if self._git(["cat-file", "-e", f"{commit}^{{commit}}"]).returncode != 0
+        ]
+        if not missing:
+            return
+        self._git(
+            [
+                "fetch",
+                "origin",
+                f"+refs/pull/{pr.ref.number}/head:refs/remotes/origin/pr/{pr.ref.number}/head",
+            ]
+        )
 
     def _patch_ids_for_range(self, target_ref: str) -> dict[str, str]:
         if target_ref in self._target_patch_ids:
@@ -178,12 +196,21 @@ class GitVerifier:
         if pr.title:
             queries.append(pr.title)
         queries.extend(subject for subject in pr.commit_subjects.values() if subject)
+        for text in [pr.title, pr.body, *pr.commit_subjects.values()]:
+            queries.extend(re.findall(r"\b[A-Z][A-Z0-9]+-\d+\b", text or ""))
 
         hits: list[str] = []
         for query in dict.fromkeys(queries):
             for commit in self._git_log_grep(query, target_ref):
                 hits.append(f"{target_ref} commit {commit} matches '{query}'")
         return hits
+
+    def metadata_hits_for_issue(self, issue_key: str, target_branch: str) -> list[str]:
+        target_ref = self._resolve_target_ref(target_branch)
+        return [
+            f"{target_ref} commit {commit} matches '{issue_key}'"
+            for commit in self._git_log_grep(issue_key, target_ref)
+        ]
 
     def _changed_file_overlap(self, changed_files: list[str], target_ref: str) -> bool:
         for filename in changed_files[:50]:

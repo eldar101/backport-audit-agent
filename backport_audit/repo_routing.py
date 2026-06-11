@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,7 +24,11 @@ def parse_repo_route(value: str) -> RepoRoute:
 def select_repo_for_issue(issue: JiraIssue, default_repo: str, routes: list[RepoRoute]) -> str:
     summary = issue.summary.lower()
     for route in routes:
-        if route.marker.lower() in summary:
+        marker = route.marker.lower()
+        marker_text = marker.strip("[](){} ")
+        if marker in summary or (
+            marker_text and re.search(rf"(^|[^a-z0-9]){re.escape(marker_text)}([^a-z0-9]|$)", summary)
+        ):
             return route.repo
     return default_repo
 

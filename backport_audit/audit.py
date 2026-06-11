@@ -95,6 +95,7 @@ def run_audit(
                 github=github,
                 default_repo=issue_repo,
             )
+            seen_refs = {(ref.repo, ref.number) for ref in pr_refs}
             for ref in pr_refs:
                 try:
                     pr_details.append(github.get_pr(ref))
@@ -112,6 +113,31 @@ def run_audit(
                         )
                     )
 
+            if repo_routes and _needs_routed_pr_search(issue.key, pr_details):
+                routed_repos = list(dict.fromkeys(route.repo for route in repo_routes))
+                for routed_repo in routed_repos:
+                    if routed_repo == issue_repo:
+                        continue
+                    for ref in github.search_prs(routed_repo, issue.key):
+                        if (ref.repo, ref.number) in seen_refs:
+                            continue
+                        seen_refs.add((ref.repo, ref.number))
+                        try:
+                            pr_details.append(github.get_pr(ref))
+                        except Exception as exc:  # noqa: BLE001
+                            results.append(
+                                IssueAuditResult(
+                                    issue=issue,
+                                    pull_requests=[],
+                                    verification=VerificationResult(
+                                        status=AuditStatus.ERROR,
+                                        method="github_pr_lookup",
+                                        error=str(exc),
+                                        evidence=[f"Failed to fetch {ref.url}"],
+                                    ),
+                                )
+                            )
+
             if not pr_details:
                 verification = VerificationResult(
                     status=AuditStatus.CLOSED_NO_PR,
@@ -122,9 +148,21 @@ def run_audit(
                 verification = _best_pr_verification(
                     issue_key=issue.key,
                     prs=pr_details,
-                    verifier=issue_verifier,
+                    verifiers=verifiers,
+                    fallback_verifier=issue_verifier,
                     target_branch=target_branch,
                 )
+                if verification.status in {
+                    AuditStatus.PR_NOT_MERGED,
+                    AuditStatus.NOT_BACKPORTED,
+                    AuditStatus.MANUAL_REVIEW,
+                }:
+                    verification = _prefer_routed_metadata_hit(
+                        issue_key=issue.key,
+                        verifiers=verifiers,
+                        target_branch=target_branch,
+                        fallback=verification,
+                    )
 
         results.append(
             IssueAuditResult(
@@ -141,7 +179,8 @@ def _best_pr_verification(
     *,
     issue_key: str,
     prs: list[PullRequestDetails],
-    verifier: GitVerifier,
+    verifiers: dict[str, GitVerifier],
+    fallback_verifier: GitVerifier,
     target_branch: str,
 ) -> VerificationResult:
     priority = {
@@ -155,6 +194,8 @@ def _best_pr_verification(
     results: list[VerificationResult] = []
     for pr in prs:
         try:
+            verifier = verifiers.get(pr.ref.repo, fallback_verifier)
+            verifier.ensure_repo()
             results.append(
                 verifier.verify_pr(
                     issue_key=issue_key,
@@ -172,6 +213,46 @@ def _best_pr_verification(
                 )
             )
     return sorted(results, key=lambda result: priority.get(result.status, 99))[0]
+
+
+def _needs_routed_pr_search(issue_key: str, prs: list[PullRequestDetails]) -> bool:
+    if not prs:
+        return True
+    normalized_issue = issue_key.lower()
+    for pr in prs:
+        haystack = "\n".join(
+            [
+                pr.title,
+                pr.body,
+                *pr.commit_subjects.values(),
+            ]
+        ).lower()
+        if normalized_issue in haystack:
+            return False
+    return True
+
+
+def _prefer_routed_metadata_hit(
+    *,
+    issue_key: str,
+    verifiers: dict[str, GitVerifier],
+    target_branch: str,
+    fallback: VerificationResult,
+) -> VerificationResult:
+    hits: list[str] = []
+    for repo, verifier in verifiers.items():
+        try:
+            verifier.ensure_repo()
+            hits.extend(f"{repo}: {hit}" for hit in verifier.metadata_hits_for_issue(issue_key, target_branch))
+        except Exception:
+            continue
+    if not hits:
+        return fallback
+    return VerificationResult(
+        status=AuditStatus.PROBABLY_BACKPORTED,
+        method="routed_branch_metadata_search",
+        evidence=hits[:5],
+    )
 
 
 def build_summary(
